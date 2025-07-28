@@ -1,0 +1,73 @@
+trigger: none  # Run only on manual trigger
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: Init
+  displayName: "Terraform Init"
+  jobs:
+  - job: InitJob
+    steps:
+    - checkout: self
+
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: '1.6.6'
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'TerraformServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        workingDirectory: '$(Build.SourcesDirectory)'
+        inlineScript: |
+          terraform init
+
+- stage: PlanDestroy
+  displayName: "Terraform Plan Destroy"
+  dependsOn: Init
+  condition: succeeded()
+  jobs:
+  - deployment: PlanDestroyJob
+    environment: destroy-approval
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: '1.6.6'
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'TerraformServiceConnection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              workingDirectory: '$(Build.SourcesDirectory)'
+              inlineScript: |
+                terraform plan -destroy -var-file="terraform.tfvars"
+
+- stage: Destroy
+  displayName: "Terraform Destroy"
+  dependsOn: PlanDestroy
+  condition: succeeded()
+  jobs:
+  - deployment: DestroyJob
+    environment: destroy-approval
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: '1.6.6'
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'TerraformServiceConnection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              workingDirectory: '$(Build.SourcesDirectory)'
+              inlineScript: |
+                terraform destroy -auto-approve -var-file="terraform.tfvars"
