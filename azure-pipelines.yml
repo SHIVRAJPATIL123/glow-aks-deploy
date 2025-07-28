@@ -1,104 +1,63 @@
-trigger: none
+trigger:
+  branches:
+    include:
+      - main
 
 pool:
   vmImage: ubuntu-latest
 
+variables:
+  terraformVersion: '1.6.6'
+
 stages:
-# ----------------------------------
-# Stage 1: Terraform Init
-# ----------------------------------
-- stage: Init
-  displayName: "Terraform Init"
+- stage: TerraformInitPlan
+  displayName: "Terraform Init & Plan"
   jobs:
-  - job: InitJob
-    displayName: "Initialize Terraform"
+  - job: Plan
+    displayName: "Terraform Init and Plan"
     steps:
     - checkout: self
 
     - task: TerraformInstaller@1
+      displayName: "Install Terraform"
       inputs:
-        terraformVersion: '1.6.6'
+        terraformVersion: $(terraformVersion)
 
     - task: AzureCLI@2
+      displayName: "Terraform Init and Plan"
       inputs:
         azureSubscription: 'TerraformServiceConnection'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         workingDirectory: '$(Build.SourcesDirectory)'
         inlineScript: |
-          terraform init -upgrade
+          terraform init -input=false
+          terraform plan -input=false -var-file="terraform.tfvars"
 
-    - publish: $(Build.SourcesDirectory)/.terraform.lock.hcl
-      artifact: terraform-lock
-
-# ----------------------------------
-# Stage 2: Terraform Plan
-# ----------------------------------
-- stage: Plan
-  displayName: "Terraform Plan"
-  dependsOn: Init
-  condition: succeeded()
-  jobs:
-  - deployment: PlanJob
-    environment: manual-approval-plan
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: self
-
-          - download: current
-            artifact: terraform-lock
-
-          - script: |
-              mv $(Pipeline.Workspace)/terraform-lock/.terraform.lock.hcl $(Build.SourcesDirectory)
-            displayName: "Move lock file to working dir"
-
-          - task: TerraformInstaller@1
-            inputs:
-              terraformVersion: '1.6.6'
-
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'TerraformServiceConnection'
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              workingDirectory: '$(Build.SourcesDirectory)'
-              inlineScript: |
-                terraform plan -var-file="terraform.tfvars"
-
-# ----------------------------------
-# Stage 3: Terraform Apply
-# ----------------------------------
-- stage: Apply
+- stage: TerraformApply
   displayName: "Terraform Apply"
-  dependsOn: Plan
+  dependsOn: TerraformInitPlan
   condition: succeeded()
   jobs:
-  - deployment: ApplyJob
-    environment: manual-approval-apply
+  - deployment: Apply
+    displayName: "Apply Terraform"
+    environment: approval-environment  # <- Approval required here
     strategy:
       runOnce:
         deploy:
           steps:
           - checkout: self
 
-          - download: current
-            artifact: terraform-lock
-
-          - script: |
-              mv $(Pipeline.Workspace)/terraform-lock/.terraform.lock.hcl $(Build.SourcesDirectory)
-            displayName: "Move lock file to working dir"
-
           - task: TerraformInstaller@1
             inputs:
-              terraformVersion: '1.6.6'
+              terraformVersion: $(terraformVersion)
 
           - task: AzureCLI@2
+            displayName: "Terraform Apply"
             inputs:
               azureSubscription: 'TerraformServiceConnection'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               workingDirectory: '$(Build.SourcesDirectory)'
               inlineScript: |
-                terraform apply -auto-approve -var-file="terraform.tfvars"
+                terraform apply -auto-approve -input=false -var-file="terraform.tfvars"
