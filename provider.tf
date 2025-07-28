@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     azurerm = {
-      source = "hashicorp/azurerm"
+      source  = "hashicorp/azurerm"
       version = "4.37.0"
     }
   }
@@ -10,8 +10,5 @@ terraform {
 provider "azurerm" {
   features {}
 
-  # Better alternative to deprecated skip_provider_registration
-  resource_provider_registrations = [
-    "Microsoft.ContainerService"
-  ]
+  resource_provider_registrations = "Microsoft.ContainerService"
 }
