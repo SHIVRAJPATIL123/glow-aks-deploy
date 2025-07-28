@@ -38,8 +38,7 @@ stages:
               azureSubscription: 'TerraformServiceConnection'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
-              inlineScript: |
-                cd terraform-aks
+              inlineScript: |                
                 terraform validate
 
 - stage: Plan
@@ -59,7 +58,6 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                cd terraform-aks
                 terraform plan -var-file="terraform.tfvars"
 
 - stage: Apply
@@ -79,5 +77,4 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                cd terraform-aks
                 terraform apply -auto-approve -var-file="terraform.tfvars"
