@@ -6,43 +6,28 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  - group: TerraformWorkloadIdentity  # ✅ Use dash for list item
-  - name: resourceGroupName
-    value: 'Az-104'
-  - name: location
-    value: 'eastus'
-
 steps:
-  - script: |
-      echo "Installing Terraform..."
-      curl -s -o terraform.zip https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip
-      unzip terraform.zip
-      sudo mv terraform /usr/local/bin/terraform
-      terraform version
-    displayName: 'Install Terraform CLI'
+  - task: TerraformInstaller@1
+    inputs:
+      terraformVersion: 'latest'
 
-  - script: |
-      echo "Logging into Azure CLI..."
-      az login --service-principal \
-        --username "$ARM_CLIENT_ID" \
-        --password "$ARM_CLIENT_SECRET" \
-        --tenant "$ARM_TENANT_ID"
+  - task: TerraformTaskV4@4
+    inputs:
+      provider: 'azurerm'
+      command: 'init'
+      backendServiceArm: 'TerraformServiceConnection'
+      backendAzureRmStorageAccountName: 'glowsatf'
+      backendAzureRmContainerName: 'sacont'
+      backendAzureRmKey: 'tf/terraform.tfstate'
 
-      az account set --subscription "$ARM_SUBSCRIPTION_ID"
-    displayName: 'Azure CLI Login'
+  - task: TerraformTaskV4@4
+    inputs:
+      provider: 'azurerm'
+      command: 'plan'
+      environmentServiceNameAzureRM: 'TerraformServiceConnection'
 
-  - script: |
-      terraform init
-      terraform validate
-    displayName: 'Terraform Init and Validate'
-
-  - script: |
-      terraform plan -out=tfplan \
-        -var="resource_group_name=$(resourceGroupName)" \
-        -var="location=$(location)"
-    displayName: 'Terraform Plan'
-
-  - script: terraform apply -input=false tfplan
-    displayName: 'Terraform Apply'
-    condition: succeeded()
+  - task: TerraformTaskV4@4
+    inputs:
+      provider: 'azurerm'
+      command: 'apply'
+      environmentServiceNameAzureRM: 'TerraformServiceConnection'
