@@ -6,8 +6,18 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+# Link the Library Variable Group (created in Library -> Variable Groups)
 variables:
-  environment: 'dev'
+- group: TerraformWorkloadIdentity
+
+- name: ARM_CLIENT_ID
+  value: $(AZURE_CLIENT_ID)
+- name: ARM_TENANT_ID
+  value: $(AZURE_TENANT_ID)
+- name: ARM_SUBSCRIPTION_ID
+  value: $(AZURE_SUBSCRIPTION_ID)
+- name: ARM_USE_AZUREAD_WORKLOAD_IDENTITY
+  value: "true"
 
 stages:
 - stage: TerraformInitPlan
@@ -15,11 +25,6 @@ stages:
   jobs:
   - job: InitAndPlan
     displayName: 'Terraform Init and Plan Job'
-    variables:
-      ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
-      ARM_TENANT_ID: $(AZURE_TENANT_ID)
-      ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-      ARM_USE_AZUREAD_WORKLOAD_IDENTITY: "true"
     steps:
     - checkout: self
 
@@ -51,12 +56,7 @@ stages:
   jobs:
   - deployment: ApplyJob
     displayName: 'Apply Terraform Job'
-    environment: 'dev-apply'
-    variables:
-      ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
-      ARM_TENANT_ID: $(AZURE_TENANT_ID)
-      ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-      ARM_USE_AZUREAD_WORKLOAD_IDENTITY: "true"
+    environment: 'dev-apply'  # Ensure this environment exists in Azure DevOps
     strategy:
       runOnce:
         deploy:
