@@ -15,7 +15,7 @@ stages:
 
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'MyAzureServiceConnection'
+        azureSubscription: 'TerraformServiceConnection'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
@@ -26,49 +26,58 @@ stages:
   displayName: "Terraform Validate"
   dependsOn: Init
   condition: succeeded()
-  environment: manual-approval-validate
   jobs:
-  - job: ValidateJob
-    steps:
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'MyAzureServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          cd terraform-aks
-          terraform validate
+  - deployment: ValidateJob
+    environment: manual-approval-validate
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'TerraformServiceConnection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd terraform-aks
+                terraform validate
 
 - stage: Plan
   displayName: "Terraform Plan"
   dependsOn: Validate
   condition: succeeded()
-  environment: manual-approval-plan
   jobs:
-  - job: PlanJob
-    steps:
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'MyAzureServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          cd terraform-aks
-          terraform plan -var-file="terraform.tfvars"
+  - deployment: PlanJob
+    environment: manual-approval-plan
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'TerraformServiceConnection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd terraform-aks
+                terraform plan -var-file="terraform.tfvars"
 
 - stage: Apply
   displayName: "Terraform Apply"
   dependsOn: Plan
   condition: succeeded()
-  environment: manual-approval-apply
   jobs:
-  - job: ApplyJob
-    steps:
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'MyAzureServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          cd terraform-aks
-          terraform apply -auto-approve -var-file="terraform.tfvars"
+  - deployment: ApplyJob
+    environment: manual-approval-apply
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'TerraformServiceConnection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd terraform-aks
+                terraform apply -auto-approve -var-file="terraform.tfvars"
