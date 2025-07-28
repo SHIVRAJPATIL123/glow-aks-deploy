@@ -29,7 +29,7 @@ stages:
         scriptLocation: 'inlineScript'
         workingDirectory: '$(Build.SourcesDirectory)'
         inlineScript: |
-          terraform init -upgrade -lockfile=ignore
+          terraform init -upgrade
 
 
 - stage: Plan
