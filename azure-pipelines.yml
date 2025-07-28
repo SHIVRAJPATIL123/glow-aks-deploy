@@ -10,39 +10,68 @@ variables:
   environment: 'dev'
 
 stages:
-  - stage: TerraformInitPlan
-    jobs:
-      - job: InitAndPlan
-        steps:
-          - task: TerraformTask@5
-            inputs:
-              provider: 'azurerm'
-              command: 'init'
-              backendServiceArm: 'TerraformServiceConnection'
-              backendAzureRmResourceGroupName: 'Az-104'
-              backendAzureRmStorageAccountName: 'glowsatf'
-              backendAzureRmContainerName: 'sacont'
-              backendAzureRmKey: 'terraform.tfstate'
+- stage: TerraformInitPlan
+  displayName: 'Terraform Init and Plan'
+  jobs:
+  - job: InitAndPlan
+    displayName: 'Terraform Init and Plan Job'
+    steps:
+    - checkout: self
 
-          - task: TerraformTask@5
-            inputs:
-              provider: 'azurerm'
-              command: 'plan'
-              environmentServiceNameAzureRM: 'TerraformServiceConnection'
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform CLI'
+      inputs:
+        terraformVersion: '1.5.7'
 
-  - stage: TerraformApply
-    displayName: 'Terraform Apply with Manual Approval'
-    dependsOn: TerraformInitPlan
-    condition: succeeded()
-    jobs:
-      - deployment: ApplyJob
-        environment: dev-apply   # <-- This is the environment name (must be created in Azure DevOps)
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: TerraformTask@5
-                  inputs:
-                    provider: 'azurerm'
-                    command: 'apply'
-                    environmentServiceNameAzureRM: 'TerraformServiceConnection'
+    - task: AzureCLI@2
+      displayName: 'Terraform Init'
+      inputs:
+        azureSubscription: 'TerraformServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        workingDirectory: '$(Build.SourcesDirectory)'
+        inlineScript: |
+          terraform init \
+            -backend-config="resource_group_name=Az-104" \
+            -backend-config="storage_account_name=glowsatf" \
+            -backend-config="container_name=sacont" \
+            -backend-config="key=terraform.tfstate"
+
+    - task: AzureCLI@2
+      displayName: 'Terraform Plan'
+      inputs:
+        azureSubscription: 'TerraformServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        workingDirectory: '$(Build.SourcesDirectory)'
+        inlineScript: |
+          terraform plan -out=tfplan
+
+- stage: TerraformApply
+  displayName: 'Terraform Apply with Manual Approval'
+  dependsOn: TerraformInitPlan
+  condition: succeeded()
+  jobs:
+  - deployment: ApplyJob
+    displayName: 'Apply Terraform Job'
+    environment: 'dev-apply'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform CLI'
+            inputs:
+              terraformVersion: '1.5.7'
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Apply'
+            inputs:
+              azureSubscription: 'TerraformServiceConnection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              workingDirectory: '$(Build.SourcesDirectory)'
+              inlineScript: |
+                terraform apply -auto-approve tfplan
