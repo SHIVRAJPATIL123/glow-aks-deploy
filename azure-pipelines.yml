@@ -13,6 +13,13 @@ variables:
 
 steps:
 # Install specific Terraform version (optional if using TerraformTaskV4)
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'TerraformServiceConnection'
+    scriptType: 'bash'
+    scriptLocation: 'scriptPath'
+    scriptPath: 
+    addSpnToEnvironment: true
 - task: TerraformInstaller@1
   inputs:
     terraformVersion: '$(terraformVersion)'
