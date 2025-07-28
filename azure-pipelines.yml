@@ -1,20 +1,17 @@
 trigger: none
 
-resources:
-  repositories:
-    - repository: self
-      type: github
-      name: github.com/SHIVRAJPATIL123/glow-aks-deploy
-      ref: main
-
 pool:
   vmImage: ubuntu-latest
 
 stages:
+# ----------------------------------
+# Stage 1: Terraform Init
+# ----------------------------------
 - stage: Init
   displayName: "Terraform Init"
   jobs:
   - job: InitJob
+    displayName: "Initialize Terraform"
     steps:
     - checkout: self
 
@@ -31,7 +28,12 @@ stages:
         inlineScript: |
           terraform init -upgrade
 
+    - publish: $(Build.SourcesDirectory)/.terraform.lock.hcl
+      artifact: terraform-lock
 
+# ----------------------------------
+# Stage 2: Terraform Plan
+# ----------------------------------
 - stage: Plan
   displayName: "Terraform Plan"
   dependsOn: Init
@@ -44,9 +46,18 @@ stages:
         deploy:
           steps:
           - checkout: self
+
+          - download: current
+            artifact: terraform-lock
+
+          - script: |
+              mv $(Pipeline.Workspace)/terraform-lock/.terraform.lock.hcl $(Build.SourcesDirectory)
+            displayName: "Move lock file to working dir"
+
           - task: TerraformInstaller@1
             inputs:
               terraformVersion: '1.6.6'
+
           - task: AzureCLI@2
             inputs:
               azureSubscription: 'TerraformServiceConnection'
@@ -56,6 +67,9 @@ stages:
               inlineScript: |
                 terraform plan -var-file="terraform.tfvars"
 
+# ----------------------------------
+# Stage 3: Terraform Apply
+# ----------------------------------
 - stage: Apply
   displayName: "Terraform Apply"
   dependsOn: Plan
@@ -68,9 +82,18 @@ stages:
         deploy:
           steps:
           - checkout: self
+
+          - download: current
+            artifact: terraform-lock
+
+          - script: |
+              mv $(Pipeline.Workspace)/terraform-lock/.terraform.lock.hcl $(Build.SourcesDirectory)
+            displayName: "Move lock file to working dir"
+
           - task: TerraformInstaller@1
             inputs:
               terraformVersion: '1.6.6'
+
           - task: AzureCLI@2
             inputs:
               azureSubscription: 'TerraformServiceConnection'
