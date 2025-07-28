@@ -10,5 +10,6 @@ terraform {
 provider "azurerm" {
   features {}
 
-  resource_provider_registrations = "Microsoft.ContainerService"
+  resource_provider_registrations = "all"
 }
+
