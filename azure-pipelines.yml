@@ -12,7 +12,13 @@ variables:
   location: 'eastus'
 
 steps:
-# ✅ Azure CLI login test (optional debug)
+# ✅ Install Terraform
+- task: TerraformInstaller@1
+  displayName: 'Install Terraform'
+  inputs:
+    terraformVersion: '$(terraformVersion)'
+
+# ✅ Test Azure Login
 - task: AzureCLI@2
   displayName: 'Test Azure CLI Login'
   inputs:
@@ -31,8 +37,8 @@ steps:
     provider: 'azurerm'
     command: 'init'
     backendServiceArm: 'TerraformServiceConnection'
-    backendAzureRmResourceGroupName: 'my-backend-rg'          # ✅ REPLACE
-    backendAzureRmStorageAccountName: 'mytfstorageacct'       # ✅ REPLACE
+    backendAzureRmResourceGroupName: 'my-backend-rg'        # <-- Replace
+    backendAzureRmStorageAccountName: 'mytfstorageacct'     # <-- Replace
     backendAzureRmContainerName: 'tfstate'
     backendAzureRmKey: 'terraform.tfstate'
 
