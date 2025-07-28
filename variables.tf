@@ -5,7 +5,7 @@ variable "cluster_name" {
 
 variable "location" {
   description = "Azure region"
-  default     = "eastus"
+  default     = "centralindia"
 }
 
 variable "node_count" {
