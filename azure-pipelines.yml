@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - main
+      - master
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -20,33 +20,27 @@ steps:
   displayName: 'Install Terraform CLI'
 
 - script: |
-    echo "Authenticating to Azure..."
-    export ARM_CLIENT_ID="${ARM_CLIENT_ID}"
-    export ARM_CLIENT_SECRET="${ARM_CLIENT_SECRET}"
-    export ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
-    export ARM_TENANT_ID="${ARM_TENANT_ID}"
+    echo "Logging into Azure CLI..."
+    az login --service-principal \
+      --username "${ARM_CLIENT_ID}" \
+      --password "${ARM_CLIENT_SECRET}" \
+      --tenant "${ARM_TENANT_ID}"
 
+    az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+  displayName: 'Azure CLI Login'
+
+- script: |
     terraform init
     terraform validate
   displayName: 'Terraform Init and Validate'
 
 - script: |
-    export ARM_CLIENT_ID="${ARM_CLIENT_ID}"
-    export ARM_CLIENT_SECRET="${ARM_CLIENT_SECRET}"
-    export ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
-    export ARM_TENANT_ID="${ARM_TENANT_ID}"
-
     terraform plan -out=tfplan \
       -var="resource_group_name=${resourceGroupName}" \
       -var="location=${location}"
   displayName: 'Terraform Plan'
 
 - script: |
-    export ARM_CLIENT_ID="${ARM_CLIENT_ID}"
-    export ARM_CLIENT_SECRET="${ARM_CLIENT_SECRET}"
-    export ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
-    export ARM_TENANT_ID="${ARM_TENANT_ID}"
-
     terraform apply -input=false tfplan
   displayName: 'Terraform Apply'
   condition: succeeded()
