@@ -41,7 +41,7 @@ stages:
   jobs:
   - deployment: Apply
     displayName: "Apply Terraform"
-    environment: approval-environment  # <- Approval required here
+    environment: approval-environment  # This requires manual approval before apply
     strategy:
       runOnce:
         deploy:
@@ -49,15 +49,17 @@ stages:
           - checkout: self
 
           - task: TerraformInstaller@1
+            displayName: "Install Terraform"
             inputs:
               terraformVersion: $(terraformVersion)
 
           - task: AzureCLI@2
-            displayName: "Terraform Apply"
+            displayName: "Terraform Init and Apply"
             inputs:
               azureSubscription: 'TerraformServiceConnection'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               workingDirectory: '$(Build.SourcesDirectory)'
               inlineScript: |
+                terraform init -input=false
                 terraform apply -auto-approve -input=false -var-file="terraform.tfvars"
