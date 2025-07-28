@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - master
+      - main
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -21,29 +21,31 @@ steps:
 
 - script: |
     echo "Authenticating to Azure..."
-    export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-    export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-    export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-    export ARM_TENANT_ID=$(ARM_TENANT_ID)
+    export ARM_CLIENT_ID="${ARM_CLIENT_ID}"
+    export ARM_CLIENT_SECRET="${ARM_CLIENT_SECRET}"
+    export ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
+    export ARM_TENANT_ID="${ARM_TENANT_ID}"
 
     terraform init
     terraform validate
   displayName: 'Terraform Init and Validate'
 
 - script: |
-    export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-    export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-    export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-    export ARM_TENANT_ID=$(ARM_TENANT_ID)
+    export ARM_CLIENT_ID="${ARM_CLIENT_ID}"
+    export ARM_CLIENT_SECRET="${ARM_CLIENT_SECRET}"
+    export ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
+    export ARM_TENANT_ID="${ARM_TENANT_ID}"
 
-    terraform plan -out=tfplan -var="resource_group_name=$(resourceGroupName)" -var="location=$(location)"
+    terraform plan -out=tfplan \
+      -var="resource_group_name=${resourceGroupName}" \
+      -var="location=${location}"
   displayName: 'Terraform Plan'
 
 - script: |
-    export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-    export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-    export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-    export ARM_TENANT_ID=$(ARM_TENANT_ID)
+    export ARM_CLIENT_ID="${ARM_CLIENT_ID}"
+    export ARM_CLIENT_SECRET="${ARM_CLIENT_SECRET}"
+    export ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
+    export ARM_TENANT_ID="${ARM_TENANT_ID}"
 
     terraform apply -input=false tfplan
   displayName: 'Terraform Apply'
