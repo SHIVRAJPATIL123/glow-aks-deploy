@@ -6,28 +6,54 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  terraformVersion: '1.5.7'
+  resourceGroupName: 'Az-104'
+  location: 'eastus'
+
 steps:
-  - task: TerraformInstaller@1
-    inputs:
-      terraformVersion: 'latest'
+# Install specific Terraform version (optional if using TerraformTaskV4)
+- task: TerraformInstaller@1
+  inputs:
+    terraformVersion: '$(terraformVersion)'
 
-  - task: TerraformTaskV4@4
-    inputs:
-      provider: 'azurerm'
-      command: 'init'
-      backendServiceArm: 'TerraformServiceConnection'
-      backendAzureRmStorageAccountName: 'glowsatf'
-      backendAzureRmContainerName: 'sacont'
-      backendAzureRmKey: 'tf/terraform.tfstate'
+# Azure CLI login test (optional debug step)
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'TerraformServiceConnection'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo "✅ Azure login successful!"
+      az account show
 
-  - task: TerraformTaskV4@4
-    inputs:
-      provider: 'azurerm'
-      command: 'plan'
-      environmentServiceNameAzureRM: 'TerraformServiceConnection'
+# Terraform Init
+- task: TerraformTaskV4@4
+  inputs:
+    provider: 'azurerm'
+    command: 'init'
+    backendServiceArm: 'TerraformServiceConnection'
+    backendAzureRmResourceGroupName: 'your-tf-backend-rg'             # Update this
+    backendAzureRmStorageAccountName: 'yourtfstateacct'               # Update this
+    backendAzureRmContainerName: 'tfstate'                            # Update this
+    backendAzureRmKey: 'terraform.tfstate'
 
-  - task: TerraformTaskV4@4
-    inputs:
-      provider: 'azurerm'
-      command: 'apply'
-      environmentServiceNameAzureRM: 'TerraformServiceConnection'
+# Terraform Plan
+- task: TerraformTaskV4@4
+  inputs:
+    provider: 'azurerm'
+    command: 'plan'
+    environmentServiceNameAzureRM: 'TerraformServiceConnection'
+    vars: |
+      resource_group_name=$(resourceGroupName)
+      location=$(location)
+    commandOptions: '-out=tfplan'
+
+# Terraform Apply
+- task: TerraformTaskV4@4
+  condition: succeeded()
+  inputs:
+    provider: 'azurerm'
+    command: 'apply'
+    environmentServiceNameAzureRM: 'TerraformServiceConnection'
+    commandOptions: 'tfplan'
