@@ -7,110 +7,62 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  terraformVersion: '1.6.6'
+  environment: 'prod'
 
 stages:
-# ----------------------
-# Stage 1: Terraform Plan
-# ----------------------
-- stage: TerraformPlan
-  displayName: "Terraform Plan"
-  jobs:
-    - job: Plan
-      displayName: "Run Terraform Plan"
-      steps:
-        - checkout: self
 
-        - task: TerraformInstaller@1
-          displayName: "Install Terraform"
-          inputs:
-            terraformVersion: $(terraformVersion)
+  - stage: TerraformPlan
+    displayName: "Terraform Init and Plan"
+    jobs:
+      - job: Plan
+        displayName: "Terraform Plan"
+        steps:
+          - task: AzureCLI@2
+            displayName: "Terraform Init & Plan"
+            inputs:
+              azureSubscription: 'TerraformServiceConnection' 
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Initializing Terraform..."
+                terraform init -backend-config="key=prod.terraform.tfstate"
 
-        - task: AzureCLI@2
-          displayName: "Terraform Init and Plan"
-          inputs:
-            azureSubscription: 'TerraformServiceConnection'  # Replace with your actual service connection name
-            scriptType: 'bash'
-            scriptLocation: 'inlineScript'
-            workingDirectory: '$(Build.SourcesDirectory)'
-            inlineScript: |
-              echo "Initializing Terraform..."
-              terraform init -input=false
+                echo "Running Terraform Plan..."
+                terraform plan \
+                  -var "subscription_id=$(ARM_SUBSCRIPTION_ID)" \
+                  -var "client_id=$(ARM_CLIENT_ID)" \
+                  -var "client_secret=$(ARM_CLIENT_SECRET)" \
+                  -var "tenant_id=$(ARM_TENANT_ID)" \
+                  -out=tfplan
+            env:
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              ARM_TENANT_ID: $(ARM_TENANT_ID)
 
-              echo "Validating Terraform files..."
-              terraform validate
-
-              echo "Running Terraform Plan..."
-              terraform plan -input=false -var-file="terraform.tfvars"
-
-# ----------------------
-# Stage 2: Terraform Apply (Manual Approval)
-# ----------------------
-- stage: TerraformApply
-  displayName: "Terraform Apply"
-  dependsOn: TerraformPlan
-  condition: succeeded()
-  jobs:
-    - deployment: Apply
-      displayName: "Apply Infrastructure"
-      environment: approval-environment  # ⚠️ Create this in DevOps UI and assign manual approvers
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - checkout: self
-
-              - task: TerraformInstaller@1
-                displayName: "Install Terraform"
-                inputs:
-                  terraformVersion: $(terraformVersion)
-
-              - task: AzureCLI@2
-                displayName: "Terraform Init and Apply"
-                inputs:
-                  azureSubscription: 'TerraformServiceConnection'
-                  scriptType: 'bash'
-                  scriptLocation: 'inlineScript'
-                  workingDirectory: '$(Build.SourcesDirectory)'
-                  inlineScript: |
-                    echo "Initializing Terraform..."
-                    terraform init -input=false
-
-                    echo "Applying Terraform Plan..."
-                    terraform apply -input=false -auto-approve -var-file="terraform.tfvars"
-
-# ----------------------
-# Stage 3: Terraform Destroy (Manual Trigger + Approval)
-# ----------------------
-- stage: TerraformDestroy
-  displayName: "Terraform Destroy"
-  dependsOn: TerraformApply
-  condition: succeeded()
-  jobs:
-    - deployment: Destroy
-      displayName: "Destroy Infrastructure"
-      environment: destroy-approval-environment  # ⚠️ Create this in DevOps UI with approvers
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - checkout: self
-
-              - task: TerraformInstaller@1
-                displayName: "Install Terraform"
-                inputs:
-                  terraformVersion: $(terraformVersion)
-
-              - task: AzureCLI@2
-                displayName: "Terraform Init and Destroy"
-                inputs:
-                  azureSubscription: 'TerraformServiceConnection'
-                  scriptType: 'bash'
-                  scriptLocation: 'inlineScript'
-                  workingDirectory: '$(Build.SourcesDirectory)'
-                  inlineScript: |
-                    echo "Initializing Terraform..."
-                    terraform init -input=false
-
-                    echo "Destroying Infrastructure..."
-                    terraform destroy -input=false -auto-approve -var-file="terraform.tfvars"
+  - stage: TerraformApply
+    displayName: "Terraform Apply"
+    dependsOn: TerraformPlan
+    condition: succeeded()
+    jobs:
+      - deployment: Apply
+        displayName: "Terraform Apply with Approval"
+        environment: 'Production'  # ✅ Requires pre-created environment with approval
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: "Terraform Apply"
+                  inputs:
+                    azureSubscription: 'TerraformServiceConnection'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      echo "Applying Terraform Plan..."
+                      terraform apply -auto-approve tfplan
+                  env:
+                    ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+                    ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+                    ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+                    ARM_TENANT_ID: $(ARM_TENANT_ID)
