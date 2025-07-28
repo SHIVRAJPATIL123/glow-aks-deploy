@@ -15,6 +15,11 @@ stages:
   jobs:
   - job: InitAndPlan
     displayName: 'Terraform Init and Plan Job'
+    variables:
+      ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
+      ARM_TENANT_ID: $(AZURE_TENANT_ID)
+      ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+      ARM_USE_AZUREAD_WORKLOAD_IDENTITY: "true"
     steps:
     - checkout: self
 
@@ -30,8 +35,6 @@ stages:
         workingDirectory: '$(Build.SourcesDirectory)'
         script: |
           terraform init
-      env:
-        ARM_USE_AZUREAD_WORKLOAD_IDENTITY: "true"
 
     - task: Bash@3
       displayName: 'Terraform Plan'
@@ -40,8 +43,6 @@ stages:
         workingDirectory: '$(Build.SourcesDirectory)'
         script: |
           terraform plan -out=tfplan
-      env:
-        ARM_USE_AZUREAD_WORKLOAD_IDENTITY: "true"
 
 - stage: TerraformApply
   displayName: 'Terraform Apply with Manual Approval'
@@ -50,7 +51,12 @@ stages:
   jobs:
   - deployment: ApplyJob
     displayName: 'Apply Terraform Job'
-    environment: 'dev-apply'  # Ensure this environment exists in Azure DevOps UI
+    environment: 'dev-apply'
+    variables:
+      ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
+      ARM_TENANT_ID: $(AZURE_TENANT_ID)
+      ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+      ARM_USE_AZUREAD_WORKLOAD_IDENTITY: "true"
     strategy:
       runOnce:
         deploy:
@@ -69,5 +75,3 @@ stages:
               workingDirectory: '$(Build.SourcesDirectory)'
               script: |
                 terraform apply -auto-approve tfplan
-            env:
-              ARM_USE_AZUREAD_WORKLOAD_IDENTITY: "true"
