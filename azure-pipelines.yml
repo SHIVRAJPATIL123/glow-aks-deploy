@@ -6,16 +6,17 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+# Global variables + variable group
 variables:
-- group: TerraformWorkloadIdentity  # Includes AZURE_CLIENT_ID, etc.
+- group: TerraformWorkloadIdentity
 - name: ARM_CLIENT_ID
   value: $(AZURE_CLIENT_ID)
-- name: ARM_SUBSCRIPTION_ID
-  value: $(AZURE_SUBSCRIPTION_ID)
 - name: ARM_TENANT_ID
   value: $(AZURE_TENANT_ID)
+- name: ARM_SUBSCRIPTION_ID
+  value: $(AZURE_SUBSCRIPTION_ID)
 - name: ARM_USE_OIDC
-  value: "true"
+  value: 'true'
 
 stages:
 - stage: TerraformInitPlan
@@ -54,7 +55,7 @@ stages:
   jobs:
   - deployment: ApplyJob
     displayName: 'Apply Terraform Job'
-    environment: 'dev-apply'
+    environment: 'dev-apply'  # Ensure this environment exists in Azure DevOps UI
     strategy:
       runOnce:
         deploy:
