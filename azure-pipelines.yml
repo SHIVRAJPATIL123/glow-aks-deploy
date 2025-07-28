@@ -20,16 +20,18 @@ stages:
               environmentServiceNameAzureRM: 'TerraformServiceConnection'
 
   - stage: TerraformApply
-    displayName: 'Manual Approval Before Apply'
+    displayName: 'Terraform Apply with Manual Approval'
     dependsOn: TerraformInitPlan
     condition: succeeded()
-    approval:
-      # This doesn't go in YAML; see the note below
     jobs:
-      - job: Apply
-        steps:
-          - task: TerraformTask@5
-            inputs:
-              provider: 'azurerm'
-              command: 'apply'
-              environmentServiceNameAzureRM: 'TerraformServiceConnection'
+      - deployment: ApplyJob
+        environment: dev-apply   # <-- This is the environment name (must be created in Azure DevOps)
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: TerraformTask@5
+                  inputs:
+                    provider: 'azurerm'
+                    command: 'apply'
+                    environmentServiceNameAzureRM: 'TerraformServiceConnection'
