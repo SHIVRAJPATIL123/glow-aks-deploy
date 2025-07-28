@@ -10,11 +10,12 @@ variables:
   terraformVersion: '1.6.6'
 
 stages:
-- stage: TerraformInitPlan
-  displayName: "Terraform Init & Plan"
+# Stage 1: Terraform Init and Plan
+- stage: TerraformPlan
+  displayName: "Terraform Plan"
   jobs:
   - job: Plan
-    displayName: "Terraform Init and Plan"
+    displayName: "Run terraform plan"
     steps:
     - checkout: self
 
@@ -34,14 +35,15 @@ stages:
           terraform init -input=false
           terraform plan -input=false -var-file="terraform.tfvars"
 
+# Stage 2: Manual Approval + Apply
 - stage: TerraformApply
   displayName: "Terraform Apply"
-  dependsOn: TerraformInitPlan
+  dependsOn: TerraformPlan
   condition: succeeded()
   jobs:
   - deployment: Apply
-    displayName: "Apply Terraform"
-    environment: approval-environment  # This requires manual approval before apply
+    displayName: "Manual Approval and Apply"
+    environment: approval-environment   # ⚠️ Must be configured in Azure DevOps
     strategy:
       runOnce:
         deploy:
@@ -62,4 +64,4 @@ stages:
               workingDirectory: '$(Build.SourcesDirectory)'
               inlineScript: |
                 terraform init -input=false
-                terraform apply -auto-approve -input=false -var-file="terraform.tfvars"
+                terraform apply -input=false -auto-approve -var-file="terraform.tfvars"
