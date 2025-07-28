@@ -4,8 +4,8 @@ resources:
   repositories:
     - repository: self
       type: github
-      name: your-github-username/glow-aks-deploy
-      ref: main  # or whatever branch you use
+      name: github.com/SHIVRAJPATIL123/glow-aks-deploy
+      ref: main
 
 pool:
   vmImage: ubuntu-latest
