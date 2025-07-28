@@ -8,61 +8,67 @@ pool:
 
 variables:
   environment: 'prod'
+  terraform_version: '1.7.5'
 
 stages:
-
-  - stage: TerraformPlan
-    displayName: "Terraform Init and Plan"
+  - stage: Terraform
     jobs:
       - job: Plan
-        displayName: "Terraform Plan"
+        displayName: 'Terraform Plan'
         steps:
-          - task: AzureCLI@2
-            displayName: "Terraform Init & Plan"
-            inputs:
-              azureSubscription: 'TerraformServiceConnection' 
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                echo "Initializing Terraform..."
-                terraform init -backend-config="key=prod.terraform.tfstate"
+          - script: |
+              echo "Installing Terraform $(terraform_version)"
+              curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_linux_amd64.zip
+              unzip terraform.zip
+              sudo mv terraform /usr/local/bin/
+              terraform -version
+            displayName: 'Install Terraform'
 
-                echo "Running Terraform Plan..."
-                terraform plan \
-                  -var "subscription_id=$(ARM_SUBSCRIPTION_ID)" \
-                  -var "client_id=$(ARM_CLIENT_ID)" \
-                  -var "client_secret=$(ARM_CLIENT_SECRET)" \
-                  -var "tenant_id=$(ARM_TENANT_ID)" \
-                  -out=tfplan
+          - script: |
+              echo "Running Terraform Init and Plan"
+
+              terraform init \
+                -backend-config="key=$(environment).terraform.tfstate"
+
+              terraform plan \
+                -var "subscription_id=$(ARM_SUBSCRIPTION_ID)" \
+                -var "client_id=$(ARM_CLIENT_ID)" \
+                -var "client_secret=$(ARM_CLIENT_SECRET)" \
+                -var "tenant_id=$(ARM_TENANT_ID)"
+            displayName: 'Terraform Plan'
             env:
               ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
               ARM_CLIENT_ID: $(ARM_CLIENT_ID)
               ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
               ARM_TENANT_ID: $(ARM_TENANT_ID)
 
-  - stage: TerraformApply
-    displayName: "Terraform Apply"
-    dependsOn: TerraformPlan
-    condition: succeeded()
-    jobs:
-      - deployment: Apply
-        displayName: "Terraform Apply with Approval"
-        environment: 'Production'  # ✅ Requires pre-created environment with approval
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: AzureCLI@2
-                  displayName: "Terraform Apply"
-                  inputs:
-                    azureSubscription: 'TerraformServiceConnection'
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
-                    inlineScript: |
-                      echo "Applying Terraform Plan..."
-                      terraform apply -auto-approve tfplan
-                  env:
-                    ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-                    ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-                    ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-                    ARM_TENANT_ID: $(ARM_TENANT_ID)
+      - job: Apply
+        displayName: 'Terraform Apply'
+        dependsOn: Plan
+        condition: succeeded()
+        steps:
+          - script: |
+              echo "Installing Terraform $(terraform_version)"
+              curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_linux_amd64.zip
+              unzip terraform.zip
+              sudo mv terraform /usr/local/bin/
+              terraform -version
+            displayName: 'Install Terraform'
+
+          - script: |
+              echo "Running Terraform Apply"
+
+              terraform init \
+                -backend-config="key=$(environment).terraform.tfstate"
+
+              terraform apply -auto-approve \
+                -var "subscription_id=$(ARM_SUBSCRIPTION_ID)" \
+                -var "client_id=$(ARM_CLIENT_ID)" \
+                -var "client_secret=$(ARM_CLIENT_SECRET)" \
+                -var "tenant_id=$(ARM_TENANT_ID)"
+            displayName: 'Terraform Apply'
+            env:
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              ARM_TENANT_ID: $(ARM_TENANT_ID)
