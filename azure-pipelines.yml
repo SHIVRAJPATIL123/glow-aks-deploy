@@ -7,40 +7,42 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  resourceGroupName: 'Az-104'
-  location: 'eastus'
+  - group: TerraformWorkloadIdentity  # ✅ Use dash for list item
+  - name: resourceGroupName
+    value: 'Az-104'
+  - name: location
+    value: 'eastus'
 
 steps:
-- script: |
-    echo "Installing Terraform..."
-    curl -s -o terraform.zip https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip
-    unzip terraform.zip
-    sudo mv terraform /usr/local/bin/terraform
-    terraform version
-  displayName: 'Install Terraform CLI'
+  - script: |
+      echo "Installing Terraform..."
+      curl -s -o terraform.zip https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip
+      unzip terraform.zip
+      sudo mv terraform /usr/local/bin/terraform
+      terraform version
+    displayName: 'Install Terraform CLI'
 
-- script: |
-    echo "Logging into Azure CLI..."
-    az login --service-principal \
-      --username "${ARM_CLIENT_ID}" \
-      --password "${ARM_CLIENT_SECRET}" \
-      --tenant "${ARM_TENANT_ID}"
+  - script: |
+      echo "Logging into Azure CLI..."
+      az login --service-principal \
+        --username "$ARM_CLIENT_ID" \
+        --password "$ARM_CLIENT_SECRET" \
+        --tenant "$ARM_TENANT_ID"
 
-    az account set --subscription "${ARM_SUBSCRIPTION_ID}"
-  displayName: 'Azure CLI Login'
+      az account set --subscription "$ARM_SUBSCRIPTION_ID"
+    displayName: 'Azure CLI Login'
 
-- script: |
-    terraform init
-    terraform validate
-  displayName: 'Terraform Init and Validate'
+  - script: |
+      terraform init
+      terraform validate
+    displayName: 'Terraform Init and Validate'
 
-- script: |
-    terraform plan -out=tfplan \
-      -var="resource_group_name=${resourceGroupName}" \
-      -var="location=${location}"
-  displayName: 'Terraform Plan'
+  - script: |
+      terraform plan -out=tfplan \
+        -var="resource_group_name=$(resourceGroupName)" \
+        -var="location=$(location)"
+    displayName: 'Terraform Plan'
 
-- script: |
-    terraform apply -input=false tfplan
-  displayName: 'Terraform Apply'
-  condition: succeeded()
+  - script: terraform apply -input=false tfplan
+    displayName: 'Terraform Apply'
+    condition: succeeded()
