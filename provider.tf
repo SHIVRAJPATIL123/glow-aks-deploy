@@ -8,7 +8,10 @@ terraform {
 }
 
 provider "azurerm" {
-  # Configuration options
-    features {}
-  skip_provider_registration = true
+  features {}
+
+  # Better alternative to deprecated skip_provider_registration
+  resource_provider_registrations = [
+    "Microsoft.ContainerService"
+  ]
 }
