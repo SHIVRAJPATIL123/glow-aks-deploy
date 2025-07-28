@@ -12,41 +12,33 @@ variables:
   location: 'eastus'
 
 steps:
-# Install specific Terraform version (optional if using TerraformTaskV4)
+# ✅ Azure CLI login test (optional debug)
 - task: AzureCLI@2
-  inputs:
-    azureSubscription: 'TerraformServiceConnection'
-    scriptType: 'bash'
-    scriptLocation: 'scriptPath'
-    scriptPath: 
-    addSpnToEnvironment: true
-- task: TerraformInstaller@1
-  inputs:
-    terraformVersion: '$(terraformVersion)'
-
-# Azure CLI login test (optional debug step)
-- task: AzureCLI@2
+  displayName: 'Test Azure CLI Login'
   inputs:
     azureSubscription: 'TerraformServiceConnection'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
+    addSpnToEnvironment: true
     inlineScript: |
       echo "✅ Azure login successful!"
       az account show
 
-# Terraform Init
+# ✅ Terraform Init
 - task: TerraformTaskV4@4
+  displayName: 'Terraform Init'
   inputs:
     provider: 'azurerm'
     command: 'init'
     backendServiceArm: 'TerraformServiceConnection'
-    backendAzureRmResourceGroupName: 'your-tf-backend-rg'             # Update this
-    backendAzureRmStorageAccountName: 'yourtfstateacct'               # Update this
-    backendAzureRmContainerName: 'tfstate'                            # Update this
+    backendAzureRmResourceGroupName: 'my-backend-rg'          # ✅ REPLACE
+    backendAzureRmStorageAccountName: 'mytfstorageacct'       # ✅ REPLACE
+    backendAzureRmContainerName: 'tfstate'
     backendAzureRmKey: 'terraform.tfstate'
 
-# Terraform Plan
+# ✅ Terraform Plan
 - task: TerraformTaskV4@4
+  displayName: 'Terraform Plan'
   inputs:
     provider: 'azurerm'
     command: 'plan'
@@ -56,8 +48,9 @@ steps:
       location=$(location)
     commandOptions: '-out=tfplan'
 
-# Terraform Apply
+# ✅ Terraform Apply
 - task: TerraformTaskV4@4
+  displayName: 'Terraform Apply'
   condition: succeeded()
   inputs:
     provider: 'azurerm'
