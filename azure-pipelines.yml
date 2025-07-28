@@ -37,8 +37,8 @@ steps:
     provider: 'azurerm'
     command: 'init'
     backendServiceArm: 'TerraformServiceConnection'
-    backendAzureRmResourceGroupName: 'my-backend-rg'        # <-- Replace
-    backendAzureRmStorageAccountName: 'mytfstorageacct'     # <-- Replace
+    backendAzureRmResourceGroupName: 'AZ-104'        # <-- Replace
+    backendAzureRmStorageAccountName: 'glowsatf'     # <-- Replace
     backendAzureRmContainerName: 'tfstate'
     backendAzureRmKey: 'terraform.tfstate'
 
