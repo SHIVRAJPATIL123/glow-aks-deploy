@@ -16,4 +16,6 @@ terraform {
 
 provider "azurerm" {
   features {}
+
+  use_workload_identity = true
 }
