@@ -23,24 +23,20 @@ stages:
       inputs:
         terraformVersion: '1.5.7'
 
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Terraform Init'
       inputs:
-        azureSubscription: 'TerraformServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
+        targetType: 'inline'
         workingDirectory: '$(Build.SourcesDirectory)'
-        inlineScript: |
+        script: |
           terraform init
 
-    - task: AzureCLI@2
+    - task: Bash@3
       displayName: 'Terraform Plan'
       inputs:
-        azureSubscription: 'TerraformServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
+        targetType: 'inline'
         workingDirectory: '$(Build.SourcesDirectory)'
-        inlineScript: |
+        script: |
           terraform plan -out=tfplan
 
 - stage: TerraformApply
@@ -50,7 +46,7 @@ stages:
   jobs:
   - deployment: ApplyJob
     displayName: 'Apply Terraform Job'
-    environment: 'dev-apply'  # Make sure this environment exists in Azure DevOps
+    environment: 'dev-apply'  # Ensure this environment exists in Azure DevOps UI
     strategy:
       runOnce:
         deploy:
@@ -62,12 +58,10 @@ stages:
             inputs:
               terraformVersion: '1.5.7'
 
-          - task: AzureCLI@2
+          - task: Bash@3
             displayName: 'Terraform Apply'
             inputs:
-              azureSubscription: 'TerraformServiceConnection'
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
+              targetType: 'inline'
               workingDirectory: '$(Build.SourcesDirectory)'
-              inlineScript: |
+              script: |
                 terraform apply -auto-approve tfplan
