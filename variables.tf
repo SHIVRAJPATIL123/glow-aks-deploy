@@ -12,3 +12,8 @@ variable "node_count" {
   description = "Number of nodes in the cluster"
   default     = 2
 }
+
+variable "resource_group_name" {
+  description = "Name of the existing Azure Resource Group"
+  type        = string
+}
