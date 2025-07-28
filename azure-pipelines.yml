@@ -31,11 +31,7 @@ stages:
         scriptLocation: 'inlineScript'
         workingDirectory: '$(Build.SourcesDirectory)'
         inlineScript: |
-          terraform init \
-            -backend-config="resource_group_name=Az-104" \
-            -backend-config="storage_account_name=glowsatf" \
-            -backend-config="container_name=sacont" \
-            -backend-config="key=terraform.tfstate"
+          terraform init
 
     - task: AzureCLI@2
       displayName: 'Terraform Plan'
@@ -54,7 +50,7 @@ stages:
   jobs:
   - deployment: ApplyJob
     displayName: 'Apply Terraform Job'
-    environment: 'dev-apply'
+    environment: 'dev-apply'  # Make sure this environment exists in Azure DevOps
     strategy:
       runOnce:
         deploy:
