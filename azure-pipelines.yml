@@ -10,7 +10,9 @@ variables:
   terraformVersion: '1.6.6'
 
 stages:
-# Stage 1: Terraform Init and Plan
+# ----------------------
+# Stage 1: Terraform Plan
+# ----------------------
 - stage: TerraformPlan
   displayName: "Terraform Plan"
   jobs:
@@ -35,7 +37,9 @@ stages:
           terraform init -input=false
           terraform plan -input=false -var-file="terraform.tfvars"
 
-# Stage 2: Manual Approval + Apply
+# ----------------------
+# Stage 2: Apply (Manual Approval)
+# ----------------------
 - stage: TerraformApply
   displayName: "Terraform Apply"
   dependsOn: TerraformPlan
@@ -43,7 +47,7 @@ stages:
   jobs:
   - deployment: Apply
     displayName: "Manual Approval and Apply"
-    environment: approval-environment   # ⚠️ Must be configured in Azure DevOps
+    environment: approval-environment  # 💡 You must create this in Azure DevOps (with approvers)
     strategy:
       runOnce:
         deploy:
@@ -65,3 +69,36 @@ stages:
               inlineScript: |
                 terraform init -input=false
                 terraform apply -input=false -auto-approve -var-file="terraform.tfvars"
+
+# ----------------------
+# Stage 3: Destroy (Manual Trigger + Approval)
+# ----------------------
+- stage: TerraformDestroy
+  displayName: "Terraform Destroy"
+  dependsOn: TerraformApply
+  condition: succeeded()
+  jobs:
+  - deployment: Destroy
+    displayName: "Manual Approval and Destroy"
+    environment: destroy-approval-environment  # 💡 Create this environment manually too
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - task: AzureCLI@2
+            displayName: "Terraform Init and Destroy"
+            inputs:
+              azureSubscription: 'TerraformServiceConnection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              workingDirectory: '$(Build.SourcesDirectory)'
+              inlineScript: |
+                terraform init -input=false
+                terraform destroy -input=false -auto-approve -var-file="terraform.tfvars"
