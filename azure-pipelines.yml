@@ -16,89 +16,101 @@ stages:
 - stage: TerraformPlan
   displayName: "Terraform Plan"
   jobs:
-  - job: Plan
-    displayName: "Run terraform plan"
-    steps:
-    - checkout: self
+    - job: Plan
+      displayName: "Run Terraform Plan"
+      steps:
+        - checkout: self
 
-    - task: TerraformInstaller@1
-      displayName: "Install Terraform"
-      inputs:
-        terraformVersion: $(terraformVersion)
+        - task: TerraformInstaller@1
+          displayName: "Install Terraform"
+          inputs:
+            terraformVersion: $(terraformVersion)
 
-    - task: AzureCLI@2
-      displayName: "Terraform Init and Plan"
-      inputs:
-        azureSubscription: 'TerraformServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        workingDirectory: '$(Build.SourcesDirectory)'
-        inlineScript: |
-          terraform init -input=false
-          terraform plan -input=false -var-file="terraform.tfvars"
+        - task: AzureCLI@2
+          displayName: "Terraform Init and Plan"
+          inputs:
+            azureSubscription: 'TerraformServiceConnection'  # Replace with your actual service connection name
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            workingDirectory: '$(Build.SourcesDirectory)'
+            inlineScript: |
+              echo "Initializing Terraform..."
+              terraform init -input=false
+
+              echo "Validating Terraform files..."
+              terraform validate
+
+              echo "Running Terraform Plan..."
+              terraform plan -input=false -var-file="terraform.tfvars"
 
 # ----------------------
-# Stage 2: Apply (Manual Approval)
+# Stage 2: Terraform Apply (Manual Approval)
 # ----------------------
 - stage: TerraformApply
   displayName: "Terraform Apply"
   dependsOn: TerraformPlan
   condition: succeeded()
   jobs:
-  - deployment: Apply
-    displayName: "Manual Approval and Apply"
-    environment: approval-environment  # 💡 You must create this in Azure DevOps (with approvers)
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: self
+    - deployment: Apply
+      displayName: "Apply Infrastructure"
+      environment: approval-environment  # ⚠️ Create this in DevOps UI and assign manual approvers
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - checkout: self
 
-          - task: TerraformInstaller@1
-            displayName: "Install Terraform"
-            inputs:
-              terraformVersion: $(terraformVersion)
+              - task: TerraformInstaller@1
+                displayName: "Install Terraform"
+                inputs:
+                  terraformVersion: $(terraformVersion)
 
-          - task: AzureCLI@2
-            displayName: "Terraform Init and Apply"
-            inputs:
-              azureSubscription: 'TerraformServiceConnection'
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              workingDirectory: '$(Build.SourcesDirectory)'
-              inlineScript: |
-                terraform init -input=false
-                terraform apply -input=false -auto-approve -var-file="terraform.tfvars"
+              - task: AzureCLI@2
+                displayName: "Terraform Init and Apply"
+                inputs:
+                  azureSubscription: 'TerraformServiceConnection'
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  workingDirectory: '$(Build.SourcesDirectory)'
+                  inlineScript: |
+                    echo "Initializing Terraform..."
+                    terraform init -input=false
+
+                    echo "Applying Terraform Plan..."
+                    terraform apply -input=false -auto-approve -var-file="terraform.tfvars"
 
 # ----------------------
-# Stage 3: Destroy (Manual Trigger + Approval)
+# Stage 3: Terraform Destroy (Manual Trigger + Approval)
 # ----------------------
 - stage: TerraformDestroy
   displayName: "Terraform Destroy"
   dependsOn: TerraformApply
   condition: succeeded()
   jobs:
-  - deployment: Destroy
-    displayName: "Manual Approval and Destroy"
-    environment: destroy-approval-environment  # 💡 Create this environment manually too
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: self
+    - deployment: Destroy
+      displayName: "Destroy Infrastructure"
+      environment: destroy-approval-environment  # ⚠️ Create this in DevOps UI with approvers
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - checkout: self
 
-          - task: TerraformInstaller@1
-            displayName: "Install Terraform"
-            inputs:
-              terraformVersion: $(terraformVersion)
+              - task: TerraformInstaller@1
+                displayName: "Install Terraform"
+                inputs:
+                  terraformVersion: $(terraformVersion)
 
-          - task: AzureCLI@2
-            displayName: "Terraform Init and Destroy"
-            inputs:
-              azureSubscription: 'TerraformServiceConnection'
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              workingDirectory: '$(Build.SourcesDirectory)'
-              inlineScript: |
-                terraform init -input=false
-                terraform destroy -input=false -auto-approve -var-file="terraform.tfvars"
+              - task: AzureCLI@2
+                displayName: "Terraform Init and Destroy"
+                inputs:
+                  azureSubscription: 'TerraformServiceConnection'
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  workingDirectory: '$(Build.SourcesDirectory)'
+                  inlineScript: |
+                    echo "Initializing Terraform..."
+                    terraform init -input=false
+
+                    echo "Destroying Infrastructure..."
+                    terraform destroy -input=false -auto-approve -var-file="terraform.tfvars"
