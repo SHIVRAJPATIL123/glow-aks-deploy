@@ -18,6 +18,7 @@ stages:
         azureSubscription: 'TerraformServiceConnection'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
+        workingDirectory: '$(Build.SourcesDirectory)'
         inlineScript: |
           terraform init
 
@@ -40,6 +41,7 @@ stages:
               azureSubscription: 'TerraformServiceConnection'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
+              workingDirectory: '$(Build.SourcesDirectory)'
               inlineScript: |
                 terraform plan -var-file="terraform.tfvars"
 
@@ -62,5 +64,6 @@ stages:
               azureSubscription: 'TerraformServiceConnection'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
+              workingDirectory: '$(Build.SourcesDirectory)'
               inlineScript: |
                 terraform apply -auto-approve -var-file="terraform.tfvars"
