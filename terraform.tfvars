@@ -1,14 +1,5 @@
-variable "cluster_name" {
-  description = "AKS cluster name"
-  type        = string
-}
+location    = "eastus"
+node_count  = 1
+cluster_name = "shivAKSCluster"
+resource_group_name = "Az-104"
 
-variable "location" {
-  description = "Azure region"
-  default     = "eastus"
-}
-
-variable "node_count" {
-  description = "Number of nodes in the cluster"
-  default     = 2
-}
