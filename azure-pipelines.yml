@@ -29,7 +29,7 @@ stages:
         scriptLocation: 'inlineScript'
         workingDirectory: '$(Build.SourcesDirectory)'
         inlineScript: |
-          terraform init
+          terraform init -upgrade
 
 - stage: Plan
   displayName: "Terraform Plan"
