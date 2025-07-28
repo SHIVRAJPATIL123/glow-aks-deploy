@@ -1,35 +1,35 @@
-trigger:
-  branches:
-    include:
-      - main
-
-pool:
-  vmImage: 'ubuntu-latest'
-
-variables:
-  environment: 'prod'
-
 stages:
-  - stage: Terraform
-    displayName: 'Terraform Apply Stage'
+  - stage: TerraformInitPlan
     jobs:
-      - job: TerraformJob
-        displayName: 'Terraform Plan and Apply'
+      - job: InitAndPlan
         steps:
-          - checkout: self
-
-          - task: AzureCLI@2
-            displayName: 'Terraform Init, Plan, Apply'
+          - task: TerraformTask@5
             inputs:
-              azureSubscription: 'TerraformServiceConnection'  # ⚠️ Replace this with your actual service connection name
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                echo "Initializing Terraform"
-                terraform init -input=false -backend-config="key=${{ variables.environment }}.terraform.tfstate"
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: 'TerraformServiceConnection'
+              backendAzureRmResourceGroupName: 'Az-104'
+              backendAzureRmStorageAccountName: 'glowsatf'
+              backendAzureRmContainerName: 'sacont'
+              backendAzureRmKey: 'terraform.tfstate'
 
-                echo "Planning Terraform"
-                terraform plan -input=false -var-file="terraform.tfvars"
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              environmentServiceNameAzureRM: 'TerraformServiceConnection'
 
-                echo "Applying Terraform"
-                terraform apply -auto-approve -input=false -var-file="terraform.tfvars"
+  - stage: TerraformApply
+    displayName: 'Manual Approval Before Apply'
+    dependsOn: TerraformInitPlan
+    condition: succeeded()
+    approval:
+      # This doesn't go in YAML; see the note below
+    jobs:
+      - job: Apply
+        steps:
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              environmentServiceNameAzureRM: 'TerraformServiceConnection'
